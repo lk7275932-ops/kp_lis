@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ТЕНДЕРЛИС — Нейросеть для госзакупок</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            300: '#fdba74',
+                            400: '#fb923c',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c05621',
+                            800: '#9a431a',
+                            900: '#7c2d12',
+                            // Dark slate from logo for two-tone text
+                            dark: '#0f172a'
+                        },
+                        danger: '#ef4444',
+                        success: '#059669' // Updated to Emerald
+                    },
+                    animation: {
+                        'scan': 'scan 3s ease-in-out infinite',
+                        'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(100%)' },
+                        },
+                        'pulse-glow': {
+                            '0%, 100%': { opacity: 1, boxShadow: '0 0 15px rgba(239, 68, 68, 0.5)' },
+                            '50%': { opacity: .5, boxShadow: '0 0 5px rgba(239, 68, 68, 0.2)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom Styles for Sliders and Ranges */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #ea580c;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 4px;
+        }
+        
+        /* Split Screen Styles */
+        .split-wrapper {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            overflow: hidden;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            background: white;
+            user-select: none;
+        }
+        .split-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+        }
+        .split-after {
+            background: #f8fafc;
+            /* Default start position at 90% */
+            clip-path: inset(0 0 0 90%);
+            border-left: 2px solid #ea580c;
+            z-index: 10;
+        }
+        .split-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            /* Matches default clip-path */
+            left: 90%; 
+            width: 4px;
+            background-color: #ea580c;
+            transform: translateX(-50%);
+            z-index: 20;
+            cursor: ew-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .split-handle-btn {
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border: 2px solid #ea580c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ea580c;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        /* Upsell Checkbox style */
+        .upsell-checkbox:checked + div {
+            border-color: #ea580c;
+            background-color: #fff7ed;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+    <!-- Top Navigation with Quick Links -->
+    <div class="fixed top-0 left-0 w-full bg-white/90 backdrop-blur-sm border-b border-slate-200 z-50 py-3 px-4 md:px-8 flex justify-between items-center">
+        <div class="font-bold text-xl tracking-tight">
+            <span class="text-brand-dark">ТЕНДЕР</span><span class="text-brand-600">ЛИС</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <a href="https://t.me/tenderlisgos77" target="_blank" class="hidden sm:flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-[#0088cc] transition">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a5.96 5.96 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                <span>Telegram</span>
+            </a>
+            <a href="https://tenderlisgos.ru/auth/login.php" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg text-sm transition">Войти</a>
+        </div>
+    </div>
+
+    <header class="relative pt-24 pb-32 flex content-center items-center justify-center min-h-[90vh] overflow-hidden bg-white">
+        <!-- Background decorative elements -->
+        <div class="absolute inset-0 z-0">
+            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjM0LCA4OCwgMTIsIDAuMDIpIi8+PC9zdmc+')]"></div>
+            <div class="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-brand-100 opacity-60 blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-orange-100 opacity-60 blur-3xl"></div>
+        </div>
+
+        <div class="container relative z-10 mx-auto px-4 md:px-8 flex flex-col lg:flex-row items-center">
+            <!-- Text Content -->
+            <div class="w-full lg:w-1/2 pr-0 lg:pr-12 text-center lg:text-left mb-12 lg:mb-0">
+                <div id="dynamic-greeting-container" class="hidden mb-4">
+                    <span class="inline-block py-1 px-3 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-sm font-medium tracking-wide">
+                        Специально для <span id="dynamic-name" class="font-bold"></span>
+                    </span>
+                </div>
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6">
+                    Сколько времени вы тратите на чтение госконтрактов? <br/>
+                    <span class="text-[#ea580c]">Делегируйте это</span> <br/>
+                    <span class="uppercase tracking-tight"><span class="text-brand-dark">ТЕНДЕР</span><span class="text-brand-600">ЛИСУ</span></span>.
+                </h1>
+                <p class="text-lg md:text-xl text-slate-600 mb-8 font-light">
+                    ЛИС AI автоматически анализирует тендерную документацию, находит скрытые риски, штрафы и готовит заявку за считанные секунды.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    <a href="https://tenderlisgos.ru/auth/login.php" target="_blank" class="bg-[#c05621] hover:bg-brand-800 text-white font-bold py-4 px-8 rounded-lg shadow-lg shadow-brand-500/20 transition duration-300 text-center">
+                        Начать бесплатно
+                    </a>
+                    <a href="#calculator" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold py-4 px-8 rounded-lg shadow-sm transition duration-300 text-center">
+                        Рассчитать выгоду
+                    </a>
+                </div>
+            </div>
+
+            <!-- Visual Animation (Interactive) -->
+            <div class="w-full lg:w-1/2 relative flex justify-center mt-10 lg:mt-0 perspective-1000">
+                <div id="interactive-demo" class="w-full max-w-md bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 overflow-visible relative cursor-pointer group hover:shadow-[0_25px_60px_rgba(234,88,12,0.15)] transition-all duration-500">
+                    
+                    <!-- Overlay Trigger -->
+                    <div id="demo-overlay" class="absolute inset-0 bg-slate-50/50 backdrop-blur-[1px] z-30 flex items-center justify-center rounded-xl transition-opacity duration-300">
+                        <div class="bg-[#ea580c] text-white px-6 py-3 rounded-full font-semibold shadow-lg shadow-orange-500/30 flex items-center gap-3 group-hover:bg-[#c05621] group-hover:scale-105 transition-all">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                            Нажмите, чтобы проанализировать
+                        </div>
+                    </div>
+
+                    <!-- Scanner Line -->
+                    <div id="demo-scanner" class="absolute top-0 left-0 w-full h-16 bg-gradient-to-b from-brand-500/0 to-brand-500/20 z-20 border-b-2 border-brand-500 shadow-[0_5px_15px_rgba(234,88,12,0.4)] opacity-0 rounded-t-xl" style="transform: translateY(-100%);"></div>
+                    
+                    <div class="p-6 relative z-10">
+                        <!-- Header mock -->
+                        <div class="w-1/3 h-4 bg-slate-200 rounded mb-6"></div>
+                        <div class="w-full h-2 bg-slate-200 rounded mb-3"></div>
+                        <div class="w-5/6 h-2 bg-slate-200 rounded mb-8"></div>
+                        
+                        <!-- Risk Block 1 -->
+                        <div class="relative min-h-[70px] mb-6">
+                            <!-- Plain text state -->
+                            <div id="plain-1" class="absolute inset-0 transition-opacity duration-300">
+                                <div class="w-full h-2 bg-slate-200 rounded mb-3"></div>
+                                <div class="w-3/4 h-2 bg-slate-200 rounded mb-3"></div>
+                                <div class="w-4/5 h-2 bg-slate-200 rounded"></div>
+                            </div>
+                            <!-- Analyzed state -->
+                            <div id="alert-1" class="opacity-0 transition-opacity duration-300 p-4 border-l-4 border-danger bg-red-50 rounded-r relative group/tooltip">
+                                <span class="absolute -top-3 left-2 bg-danger text-white text-[10px] font-bold px-2 py-1 rounded shadow uppercase">КРИТИЧЕСКИЙ РИСК</span>
+                                <p class="text-xs text-red-600 mt-2 font-medium">Штраф за просрочку: 15% в день вместо стандартных 1%</p>
+                                
+                                <!-- Tooltip AI -->
+                                <div class="absolute z-40 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-slate-900 text-white text-xs p-3 rounded-lg shadow-xl opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none">
+                                    <div class="font-bold text-brand-400 mb-1 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                        Решение ИИ:
+                                    </div>
+                                    Сгенерирован протокол разногласий. Требование привести пени в соответствие с ч.7 ст.34 44-ФЗ.
+                                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-full h-2 bg-slate-200 rounded mb-3 mt-4"></div>
+                        <div class="w-4/5 h-2 bg-slate-200 rounded mb-8"></div>
+                        
+                        <!-- Risk Block 2 -->
+                        <div class="relative min-h-[60px]">
+                            <!-- Plain text state -->
+                            <div id="plain-2" class="absolute inset-0 transition-opacity duration-300">
+                                <div class="w-full h-2 bg-slate-200 rounded mb-3"></div>
+                                <div class="w-2/3 h-2 bg-slate-200 rounded"></div>
+                            </div>
+                            <!-- Analyzed state -->
+                            <div id="alert-2" class="opacity-0 transition-opacity duration-300 p-4 border-l-4 border-[#ea580c] bg-orange-50 rounded-r relative mt-4 group/tooltip">
+                                <span class="absolute -top-3 left-2 bg-[#ea580c] text-white text-[10px] font-bold px-2 py-1 rounded shadow uppercase">ИЗМЕНЕНИЕ СРОКОВ</span>
+                                <div class="w-full h-2 bg-orange-200 rounded mb-2 mt-2"></div>
+                                <div class="w-2/3 h-2 bg-orange-200 rounded"></div>
+                                
+                                <!-- Tooltip AI -->
+                                <div class="absolute z-40 bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-slate-900 text-white text-xs p-3 rounded-lg shadow-xl opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none">
+                                    <div class="font-bold text-brand-400 mb-1 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                        Заметка ИИ:
+                                    </div>
+                                    Заказчик увеличил срок приемки товара с 10 до 25 рабочих дней. Учтено в фин. модели.
+                                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="calculator" class="py-20 bg-slate-50">
+        <div class="container mx-auto px-4 md:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Математика экономии</h2>
+                <p class="text-lg text-slate-500">Узнайте, сколько вы теряете на ручном анализе документации, и как быстро окупается ЛИС AI.</p>
+            </div>
+
+            <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row border border-slate-100">
+                <!-- Sliders -->
+                <div class="w-full md:w-1/2 p-8 lg:p-12 border-b md:border-b-0 md:border-r border-slate-200 bg-white">
+                    <div class="mb-10">
+                        <div class="flex justify-between items-end mb-4">
+                            <label class="text-sm font-semibold text-slate-700">Количество изучаемых закупок (в месяц)</label>
+                            <span id="val-count" class="text-2xl font-bold text-brand-600">50</span>
+                        </div>
+                        <input type="range" id="slider-count" min="1" max="100" value="50" class="w-full">
+                        <div class="flex justify-between text-xs text-slate-400 mt-2">
+                            <span>1</span>
+                            <span>100</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-10">
+                        <div class="flex justify-between items-end mb-4">
+                            <label class="text-sm font-semibold text-slate-700">Время на одну закупку (часов)</label>
+                            <span class="text-2xl font-bold text-brand-600"><span id="val-time">2</span> ч</span>
+                        </div>
+                        <input type="range" id="slider-time" min="0.5" max="10" step="0.5" value="2" class="w-full">
+                        <div class="flex justify-between text-xs text-slate-400 mt-2">
+                            <span>0.5 ч</span>
+                            <span>10 ч</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-4">
+                            <label class="text-sm font-semibold text-slate-700">Зарплата специалиста (₽)</label>
+                            <span id="val-salary" class="text-2xl font-bold text-brand-600">100 000 ₽</span>
+                        </div>
+                        <input type="range" id="slider-salary" min="50000" max="200000" step="5000" value="100000" class="w-full">
+                        <div class="flex justify-between text-xs text-slate-400 mt-2">
+                            <span>50 000 ₽</span>
+                            <span>200 000 ₽</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results - Premium Redesign -->
+                <div class="w-full md:w-1/2 p-8 lg:p-12 relative overflow-hidden bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 text-white flex flex-col justify-center">
+                    <!-- Glow effects -->
+                    <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+                    
+                    <div class="mb-8 relative z-10">
+                        <p class="text-white/80 text-sm mb-1 font-medium">Ручной поиск и анализ стоит вам:</p>
+                        <!-- Белый текст, зачеркнутый темно-синим -->
+                        <div class="text-4xl font-bold text-white line-through decoration-slate-800/80 decoration-[4px] drop-shadow-sm" id="res-manual">0 ₽</div>
+                        <p class="text-xs text-white/70 mt-2 font-light" id="res-note">*При расчете 2 ч на 1 закупку</p>
+                    </div>
+
+                    <div class="mb-8 relative z-10">
+                        <p class="text-white/80 text-sm mb-1 font-medium">Подписка на ЛИС AI:</p>
+                        <div class="text-3xl font-bold text-white drop-shadow-sm">2 990 ₽ <span class="text-lg font-normal text-white/70">/ мес</span></div>
+                    </div>
+
+                    <!-- Белая плашка с зеленой экономией -->
+                    <div class="p-6 md:p-8 bg-white rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] relative z-10 transform transition-transform hover:-translate-y-1 hover:shadow-[0_25px_50px_-15px_rgba(0,0,0,0.4)] duration-300">
+                        <!-- Premium Badge -->
+                        <div class="absolute -top-3 -right-3 w-10 h-10 bg-success rounded-full flex items-center justify-center shadow-lg shadow-success/30 border-4 border-white">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <p class="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-wider">Ваша чистая экономия в месяц:</p>
+                        <!-- Глубокий зеленый цвет Emerald -->
+                        <div class="text-4xl lg:text-5xl font-extrabold text-success tracking-tight drop-shadow-sm" id="res-savings">0 ₽</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 bg-white border-t border-slate-100">
+        <div class="container mx-auto px-4 md:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4 text-brand-dark">
+                    <span class="text-brand-dark">Увидит то,</span> что пропустит человек
+                </h2>
+                <p class="text-lg text-slate-500 max-w-2xl mx-auto">Потяните ползунок, чтобы увидеть, как <span class="font-bold text-brand-dark">ТЕНДЕР</span><span class="font-bold text-brand-600">ЛИС</span> превращает запутанную документацию на 50 страниц в понятную выжимку рисков.</p>
+            </div>
+
+            <div class="max-w-4xl mx-auto">
+                <div class="split-wrapper text-left bg-white border border-slate-200" id="split-container">
+                    
+                    <!-- BEFORE Layer (Base) -->
+                    <div class="split-layer bg-white flex flex-col justify-center pl-8 md:pl-12">
+                        <h3 class="text-sm font-bold text-slate-400 mb-6 uppercase tracking-wider">Обычный документ (Без ИИ)</h3>
+                        <div class="text-slate-400 font-serif text-sm md:text-base leading-relaxed text-justify select-none pointer-events-none max-w-2xl">
+                            <p class="mb-4">5.4. В случае просрочки исполнения Поставщиком обязательств, предусмотренных контрактом, а также в иных случаях неисполнения или ненадлежащего исполнения Поставщиком обязательств, Заказчик направляет Поставщику требование об уплате неустоек (штрафов, пеней).</p>
+                            <p class="mb-4">Пеня начисляется за каждый день просрочки в размере одной трехсотой действующей на дату уплаты пени ключевой ставки Центрального банка РФ от цены контракта, за исключением случаев, если законодательством РФ установлен иной порядок начисления пеней, при этом размер пени устанавливается в размере 15% от стоимости этапа.</p>
+                            <p>7.1. Оплата поставленного товара осуществляется за счет средств бюджета в течение 90 рабочих дней с даты подписания Сторонами акта приема-передачи...</p>
+                        </div>
+                    </div>
+
+                    <!-- AFTER Layer -->
+                    <div class="split-layer split-after flex flex-col justify-center pl-8 md:pl-12" id="split-after-layer">
+                        <h3 class="text-sm font-bold text-brand-600 mb-6 uppercase tracking-wider flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            Разбор ЛИС AI
+                        </h3>
+                        <div class="text-slate-800 font-serif text-sm md:text-base leading-relaxed text-justify select-none pointer-events-none max-w-2xl">
+                            <p class="mb-4">5.4. В случае просрочки исполнения Поставщиком обязательств, предусмотренных контрактом, а также в иных случаях неисполнения или ненадлежащего исполнения Поставщиком обязательств, Заказчик направляет Поставщику требование об уплате неустоек (штрафов, пеней).</p>
+                            <p class="mb-4">Пеня начисляется за каждый день просрочки в размере одной трехсотой действующей на дату уплаты пени ключевой ставки РФ от цены, за исключением случаев, если установлен иной порядок начисления пеней, при этом <span class="bg-red-200 text-red-900 font-bold px-1 rounded relative border-b-2 border-red-500">размер пени устанавливается в размере 15% от стоимости этапа<span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[220px] px-3 py-2 bg-red-600 text-white text-xs rounded-lg shadow-lg z-10 font-sans font-normal text-center leading-tight">Критический риск!<br>Завышенный штраф. Стандарт - 1%</span></span>.</p>
+                            <p>7.1. Оплата поставленного товара осуществляется за счет средств бюджета в течение <span class="bg-orange-200 text-orange-900 font-bold px-1 rounded relative border-b-2 border-orange-500">90 рабочих дней<span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[220px] px-3 py-2 bg-orange-500 text-white text-xs rounded-lg shadow-lg z-10 font-sans font-normal text-center leading-tight">Предупреждение!<br>Отсрочка платежа более 4 месяцев</span></span> с даты подписания Сторонами акта приема-передачи...</p>
+                        </div>
+                    </div>
+
+                    <!-- Slider Handle -->
+                    <div class="split-handle" id="split-handle">
+                        <div class="split-handle-btn flex flex-col gap-1 items-center justify-center">
+                            <div class="w-1 h-1 bg-brand-500 rounded-full"></div>
+                            <div class="w-1 h-1 bg-brand-500 rounded-full"></div>
+                            <div class="w-1 h-1 bg-brand-500 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOMO Block -->
+    <section class="py-20 bg-slate-50 relative overflow-hidden" id="fomo-section">
+        <div class="container mx-auto px-4 md:px-8 relative z-10">
+            <div class="max-w-3xl mx-auto bg-white rounded-2xl p-8 md:p-12 border border-slate-200 shadow-lg">
+                <div class="flex items-center justify-center w-16 h-16 bg-danger/10 rounded-full mb-6 mx-auto">
+                    <svg class="w-8 h-8 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                
+                <h2 class="text-2xl md:text-3xl font-bold text-slate-900 text-center mb-6">Ваши "слепые зоны"</h2>
+                
+                <div id="dynamic-fomo-content" class="text-center">
+                    <p class="text-lg text-slate-600 leading-relaxed mb-6">
+                        По статистике, компании в вашей отрасли теряют до <strong>15% прибыли</strong> из-за невыгодных условий, спрятанных в тендерной документации. На базовом бесплатном тарифе эти данные остаются скрытыми от вас.
+                    </p>
+                    <div class="bg-slate-50 rounded-lg p-6 border border-slate-200 inline-block text-left w-full sm:w-auto">
+                        <div class="flex items-center mb-2">
+                            <span class="w-3 h-3 rounded-full bg-danger mr-3 animate-pulse"></span>
+                            <span class="text-slate-700">Скрытые штрафы: <strong class="text-slate-400">не проверено</strong></span>
+                        </div>
+                        <div class="flex items-center mb-2">
+                            <span class="w-3 h-3 rounded-full bg-danger mr-3 animate-pulse"></span>
+                            <span class="text-slate-700">Невыгодные авансы: <strong class="text-slate-400">не проверено</strong></span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 rounded-full bg-danger mr-3 animate-pulse"></span>
+                            <span class="text-slate-700">Риски расторжения: <strong class="text-slate-400">не проверено</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tariffs Section -->
+    <section id="tariffs" class="py-20 bg-white">
+        <div class="container mx-auto px-4 md:px-8 max-w-7xl">
+            <div class="mb-10 text-center md:text-left">
+                <h2 class="text-3xl md:text-4xl font-bold text-brand-dark mb-2">Тарифы и подписка</h2>
+                <p class="text-slate-500 mb-8 text-sm">Одна платформа для поиска и работы с закупками любого масштаба.</p>
+                <div class="flex flex-col md:flex-row md:items-center justify-between">
+                    <h3 class="text-xl md:text-2xl font-bold text-slate-900 mb-4 md:mb-0">Поиск — бесплатно. ИИ — когда он нужен.</h3>
+                    <div class="inline-flex bg-slate-100 rounded-lg p-1 border border-slate-200 mx-auto md:mx-0">
+                        <button id="btn-month" class="px-5 py-2 bg-white rounded shadow-sm text-sm font-medium text-slate-900 transition-colors">Месяц</button>
+                        <button id="btn-year" class="px-5 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">Год</button>
+                    </div>
+                </div>
+                <p class="text-slate-500 text-sm mt-2 md:mt-1">Ваши профили и подборки сохраняются при переходе между тарифами.</p>
+            </div>
+
+            <!-- Pricing Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                
+                <!-- Free Tier -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col hover:border-slate-300 transition shadow-sm">
+                    <div class="text-xs text-slate-400 mb-2 font-medium">Для всех</div>
+                    <h4 class="text-2xl font-bold text-slate-900 mb-6">Лис Поиск</h4>
+                    <div class="mb-8 border-b border-slate-100 pb-8">
+                        <div class="text-4xl font-bold text-slate-900 flex items-baseline gap-1">0 ₽</div>
+                        <div class="text-xs text-slate-500 mt-1">Бесплатно, навсегда</div>
+                    </div>
+                    <ul class="space-y-4 mb-8 flex-grow text-sm text-slate-700">
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-600 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Поиск закупок по всей РФ и фильтры</li>
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-600 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Профили поиска без ограничений</li>
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-600 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 3 бесплатных разбора закупки с ИИ</li>
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-600 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Карточки, избранное и подборки</li>
+                    </ul>
+                    <a href="https://tenderlisgos.ru/auth/login.php" target="_blank" class="block w-full py-3.5 px-4 border border-slate-300 rounded-xl text-center text-slate-800 font-medium hover:bg-slate-50 transition">
+                        Начать бесплатно
+                    </a>
+                </div>
+
+                <!-- Basic/AI Tier (Highlighted) -->
+                <div class="bg-white rounded-2xl border-2 border-brand-500 p-8 flex flex-col relative shadow-xl transform lg:-translate-y-2">
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 -mt-3 bg-brand-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                        Хит продаж
+                    </div>
+                    <div class="text-xs text-[#c05621] font-medium mb-2">Для специалистов</div>
+                    <h4 class="text-2xl font-bold text-slate-900 mb-6">Лис AI</h4>
+                    <div class="mb-8 border-b border-slate-100 pb-8">
+                        <div id="price-container-ai" class="text-4xl font-bold text-slate-900 flex items-baseline gap-1">2 990 ₽ <span class="text-base font-normal text-slate-500">/ мес</span></div>
+                        <div id="desc-container-ai" class="text-xs text-slate-500 mt-1">30 дней. Разовая оплата.</div>
+                    </div>
+                    <ul class="space-y-4 mb-8 flex-grow text-sm text-slate-700">
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-600 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> <strong>Всё из тарифа Лис Поиск</strong></li>
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-600 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Единый ИИ-чат и разбор документов</li>
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-600 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> До 5 расчётов экономики в месяц</li>
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-600 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> До 5 пользователей в кабинете</li>
+                    </ul>
+                    <div class="text-center text-xs text-slate-500 mb-2">Оплата производится в личном кабинете</div>
+                    <a href="https://tenderlisgos.ru/auth/login.php" target="_blank" class="block text-center w-full py-3.5 px-4 bg-[#ea580c] hover:bg-[#c05621] text-white rounded-xl font-medium transition shadow-md">
+                        Перейти к оплате
+                    </a>
+                </div>
+
+                <!-- PRO Tier (New) -->
+                <div class="bg-brand-dark rounded-2xl border border-slate-800 p-8 flex flex-col relative shadow-lg">
+                    <div class="text-xs text-brand-400 font-medium mb-2">Для тендерных отделов</div>
+                    <h4 class="text-2xl font-bold text-white mb-6">Лис PRO</h4>
+                    <div class="mb-8 border-b border-slate-700 pb-8">
+                        <div class="text-4xl font-bold text-white flex items-baseline gap-1">9 990 ₽ <span class="text-base font-normal text-slate-400">/ мес</span></div>
+                        <div class="text-xs text-slate-400 mt-1">Оплата по счету от юр. лица</div>
+                    </div>
+                    <ul class="space-y-4 mb-8 flex-grow text-sm text-slate-300">
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-500 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> <strong>Безлимитный ИИ-анализ закупок</strong></li>
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-500 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> До 50 расчётов экономики</li>
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-500 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Персональный аккаунт-менеджер</li>
+                        <li class="flex items-start"><svg class="w-5 h-5 text-brand-500 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Интеграция с вашей CRM / API</li>
+                    </ul>
+                    <a href="https://t.me/tenderlisgos" target="_blank" class="block w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 rounded-xl text-center font-medium transition">
+                        Обсудить в Telegram
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- Upsells for Лис AI -->
+            <div class="mb-6 border-t border-slate-200 pt-16">
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Дополнительные пакеты ИИ (для тарифа Лис AI)</h3>
+                <p class="text-sm text-slate-500 max-w-4xl">Нужно больше расчетов? Докупите пакеты к базовой подписке. ИИ готовит черновик расчёта, проверка вашим специалистом обязательна.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+                <label class="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 flex flex-col cursor-pointer hover:border-brand-400 transition group relative shadow-sm">
+                    <div class="absolute top-6 right-6">
+                        <input type="checkbox" class="upsell-checkbox w-6 h-6 text-brand-600 border-slate-300 rounded focus:ring-brand-500" data-price="990">
+                    </div>
+                    <div class="text-base font-bold text-slate-900 mb-2">10 дополнительных расчётов</div>
+                    <div class="text-3xl font-bold text-slate-900 mb-1 flex items-baseline gap-1">990 ₽</div>
+                    <div class="text-xs text-slate-500 mb-6 flex-grow">99 ₽ за расчёт</div>
+                </label>
+
+                <label class="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 flex flex-col cursor-pointer hover:border-brand-400 transition group relative shadow-sm">
+                    <div class="absolute top-6 right-6">
+                        <input type="checkbox" class="upsell-checkbox w-6 h-6 text-brand-600 border-slate-300 rounded focus:ring-brand-500" data-price="2490">
+                    </div>
+                    <div class="text-base font-bold text-slate-900 mb-2">30 дополнительных расчётов</div>
+                    <div class="text-3xl font-bold text-slate-900 mb-1 flex items-baseline gap-1">2 490 ₽</div>
+                    <div class="text-xs text-slate-500 mb-6 flex-grow">83 ₽ за расчёт</div>
+                </label>
+            </div>
+
+            <!-- New Section: DFY Services -->
+            <div class="mb-8">
+                <h3 class="text-2xl font-bold text-slate-900 mb-2">Тендерное сопровождение и услуги</h3>
+                <p class="text-sm text-slate-500 max-w-3xl">Делегируйте сложные задачи нашим экспертам. Мы поможем выиграть тендер, защитим в ФАС или оформим гарантию.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Service 1 -->
+                <div class="bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-white rounded-lg border border-slate-200 flex items-center justify-center mb-4 text-brand-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h4 class="font-bold text-slate-900 mb-2">Участие "Под ключ"</h4>
+                    <p class="text-sm text-slate-600 mb-6 flex-grow">Полное делегирование: от поиска закупки и анализа документации до подачи заявки, участия в торгах и подписания контракта.</p>
+                    <div class="font-bold text-slate-900 mb-4">от 30 000 ₽ + %</div>
+                    <a href="https://t.me/tenderlisgos" target="_blank" class="text-center w-full py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:text-brand-600 hover:border-brand-600 transition">Запросить аудит</a>
+                </div>
+
+                <!-- Service 2 -->
+                <div class="bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-white rounded-lg border border-slate-200 flex items-center justify-center mb-4 text-brand-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>
+                    </div>
+                    <h4 class="font-bold text-slate-900 mb-2">Защита в ФАС</h4>
+                    <p class="text-sm text-slate-600 mb-6 flex-grow">Экстренная юридическая помощь при неправомерном отклонении заявки или заточенном ТЗ. Подготовка жалобы и участие в комиссии.</p>
+                    <div class="font-bold text-slate-900 mb-4">от 15 000 ₽</div>
+                    <a href="https://t.me/tenderlisgos" target="_blank" class="text-center w-full py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:text-brand-600 hover:border-brand-600 transition">Нужна помощь</a>
+                </div>
+
+                <!-- Service 3 -->
+                <div class="bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-white rounded-lg border border-slate-200 flex items-center justify-center mb-4 text-brand-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <h4 class="font-bold text-slate-900 mb-2">Банковские гарантии</h4>
+                    <p class="text-sm text-slate-600 mb-6 flex-grow">Подбор лучшего предложения от 50+ банков-партнеров для обеспечения заявки или контракта. Вы платите только комиссию банку.</p>
+                    <div class="font-bold text-slate-900 mb-4">Бесплатно</div>
+                    <a href="https://t.me/tenderlisgos" target="_blank" class="text-center w-full py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:text-brand-600 hover:border-brand-600 transition">Получить расчет</a>
+                </div>
+            </div>
+
+            <!-- Sticky Total Bar for Checkout -->
+            <div id="sticky-checkout" class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 py-3 px-4 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] transform translate-y-full transition-transform duration-300 z-40 flex justify-center">
+                <div class="container max-w-6xl flex flex-col md:flex-row justify-between items-center gap-3">
+                    <div class="text-center md:text-left">
+                        <span class="block text-xs text-slate-500">Итого к оплате (Лис AI + опции):</span>
+                        <span class="text-xl md:text-2xl font-bold text-slate-900" id="total-price-sticky">2 990 ₽</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="hidden md:inline-block text-xs text-slate-500 max-w-[200px] text-right">Чтобы оплатить тариф, перейдите в личный кабинет</span>
+                        <a href="https://tenderlisgos.ru/auth/login.php" target="_blank" class="block text-center py-3 px-8 bg-[#ea580c] hover:bg-[#c05621] text-white rounded-xl font-medium transition shadow-md whitespace-nowrap">
+                            Перейти в кабинет
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-brand-dark py-12 border-t border-slate-800">
+        <div class="container mx-auto px-4 max-w-7xl flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="text-center md:text-left">
+                <div class="font-bold text-xl tracking-tight mb-2 text-white">
+                    ТЕНДЕР<span class="text-brand-500">ЛИС</span>
+                </div>
+                <p class="text-slate-400 text-sm">© 2026 ЛИС AI. Все права защищены. <br/>Сервис не является публичной офертой.</p>
+            </div>
+            
+            <div class="flex gap-6">
+                <a href="https://t.me/tenderlisgos77" target="_blank" class="text-slate-400 hover:text-white transition text-sm flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a5.96 5.96 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                    Наш Telegram
+                </a>
+                <a href="https://tenderlisgos.ru/auth/login.php" class="text-slate-400 hover:text-white transition text-sm">Вход на платформу</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const formatCurrency = (num) => {
+            return new Intl.NumberFormat('ru-RU').format(Math.round(num)) + ' ₽';
+        };
+
+        function parseURLParams() {
+            const params = new URLSearchParams(window.location.search);
+            const name = params.get('name');
+            const stats = params.get('stats');
+            const risks = params.get('risks');
+            const hash = params.get('hash');
+
+            if (name) {
+                const decodedName = decodeURIComponent(name.replace(/\+/g, ' '));
+                document.getElementById('dynamic-name').textContent = decodedName;
+                document.getElementById('dynamic-greeting-container').classList.remove('hidden');
+            }
+
+            if (stats && risks && hash) {
+                const fomoContent = document.getElementById('dynamic-fomo-content');
+                fomoContent.innerHTML = `
+                    <p class="text-xl text-slate-800 font-medium leading-relaxed mb-6">
+                        В вашем аккаунте <strong class="text-brand-600 text-2xl">${stats}</strong> сохраненных подборок. <br/>
+                        Мы проанализировали их в фоне: в <strong class="text-danger text-2xl">${risks}</strong> из них заказчики указали невыгодные условия аванса и скрытые пени, которые вы могли не заметить.
+                    </p>
+                    <div class="bg-danger/5 border border-danger/20 rounded-lg p-4 inline-block">
+                        <p class="text-danger font-bold uppercase text-sm tracking-wider">На базовом тарифе эти данные скрыты</p>
+                    </div>
+                `;
+            }
+        }
+
+        function initCalculator() {
+            const countSlider = document.getElementById('slider-count');
+            const salarySlider = document.getElementById('slider-salary');
+            const timeSlider = document.getElementById('slider-time');
+            const valCount = document.getElementById('val-count');
+            const valSalary = document.getElementById('val-salary');
+            const valTime = document.getElementById('val-time');
+            const resManual = document.getElementById('res-manual');
+            const resSavings = document.getElementById('res-savings');
+            const resNote = document.getElementById('res-note');
+
+            const LIS_AI_COST = 2990;
+            const WORKING_HOURS_PER_MONTH = 160;
+
+            function calculate() {
+                const tenders = parseInt(countSlider.value);
+                const salary = parseInt(salarySlider.value);
+                const hours = parseFloat(timeSlider.value);
+
+                valCount.textContent = tenders;
+                valSalary.textContent = formatCurrency(salary);
+                valTime.textContent = hours;
+
+                const hourlyRate = salary / WORKING_HOURS_PER_MONTH;
+                const manualCost = tenders * hours * hourlyRate;
+                const savings = manualCost > LIS_AI_COST ? manualCost - LIS_AI_COST : 0;
+
+                resManual.textContent = formatCurrency(manualCost);
+                resSavings.textContent = formatCurrency(savings);
+                resNote.textContent = `*При расчете ${hours} ч на 1 закупку`;
+            }
+
+            countSlider.addEventListener('input', calculate);
+            salarySlider.addEventListener('input', calculate);
+            timeSlider.addEventListener('input', calculate);
+            calculate();
+        }
+
+        function initSplitScreen() {
+            const container = document.getElementById('split-container');
+            const handle = document.getElementById('split-handle');
+            const afterLayer = document.getElementById('split-after-layer');
+            let isDragging = false;
+
+            function moveSlider(clientX) {
+                const rect = container.getBoundingClientRect();
+                let x = clientX - rect.left;
+                if (x < 0) x = 0;
+                if (x > rect.width) x = rect.width;
+                const percentage = (x / rect.width) * 100;
+                handle.style.left = percentage + '%';
+                afterLayer.style.clipPath = `inset(0 0 0 ${percentage}%)`;
+            }
+
+            handle.addEventListener('mousedown', () => isDragging = true);
+            window.addEventListener('mouseup', () => isDragging = false);
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) moveSlider(e.clientX);
+            });
+
+            handle.addEventListener('touchstart', () => {
+                isDragging = true;
+                document.body.style.overflow = 'hidden'; 
+            }, {passive: true});
+            
+            window.addEventListener('touchend', () => {
+                isDragging = false;
+                document.body.style.overflow = '';
+            });
+            
+            window.addEventListener('touchmove', (e) => {
+                if (isDragging) moveSlider(e.touches[0].clientX);
+            }, {passive: true});
+        }
+
+        let currentTotal = 2990;
+
+        function initTariffs() {
+            const checkboxes = document.querySelectorAll('.upsell-checkbox');
+            const totalDisplaySticky = document.getElementById('total-price-sticky');
+            const stickyBar = document.getElementById('sticky-checkout');
+
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    let total = 2990; 
+                    checkboxes.forEach(box => {
+                        if (box.checked) {
+                            total += parseInt(box.dataset.price);
+                        }
+                    });
+                    currentTotal = total;
+                    if(totalDisplaySticky) totalDisplaySticky.textContent = formatCurrency(total);
+                    
+                    if (total > 2990) {
+                        stickyBar.classList.remove('translate-y-full');
+                    } else {
+                        stickyBar.classList.add('translate-y-full');
+                    }
+                });
+            });
+        }
+
+        function initHeroDemo() {
+            const container = document.getElementById('interactive-demo');
+            if(!container) return;
+            
+            const overlay = document.getElementById('demo-overlay');
+            const scanner = document.getElementById('demo-scanner');
+            const plain1 = document.getElementById('plain-1');
+            const alert1 = document.getElementById('alert-1');
+            const plain2 = document.getElementById('plain-2');
+            const alert2 = document.getElementById('alert-2');
+            let isAnimating = false;
+
+            container.addEventListener('click', () => {
+                if(isAnimating) return;
+                isAnimating = true;
+                
+                overlay.style.opacity = '0';
+                overlay.style.pointerEvents = 'none';
+                
+                scanner.style.opacity = '1';
+                scanner.style.transition = 'transform 2s linear';
+                scanner.style.transform = 'translateY(400px)';
+                
+                setTimeout(() => { plain1.style.opacity = '0'; alert1.style.opacity = '1'; }, 600);
+                setTimeout(() => { plain2.style.opacity = '0'; alert2.style.opacity = '1'; }, 1300);
+                
+                setTimeout(() => {
+                    scanner.style.opacity = '0';
+                    setTimeout(() => {
+                        scanner.style.transition = 'none';
+                        scanner.style.transform = 'translateY(-100%)';
+                        setTimeout(() => {
+                            overlay.style.opacity = '1';
+                            overlay.style.pointerEvents = 'auto';
+                            plain1.style.opacity = '1';
+                            alert1.style.opacity = '0';
+                            plain2.style.opacity = '1';
+                            alert2.style.opacity = '0';
+                            isAnimating = false;
+                        }, 8000);
+                    }, 300);
+                }, 2000);
+            });
+        }
+
+        function initBillingToggle() {
+            const btnMonth = document.getElementById('btn-month');
+            const btnYear = document.getElementById('btn-year');
+            const priceAi = document.getElementById('price-container-ai');
+            const descAi = document.getElementById('desc-container-ai');
+            
+            if (!btnMonth || !btnYear) return;
+
+            btnMonth.addEventListener('click', () => {
+                btnMonth.className = "px-5 py-2 bg-white rounded shadow-sm text-sm font-medium text-slate-900 transition-colors";
+                btnYear.className = "px-5 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors";
+                
+                priceAi.innerHTML = '2 990 ₽ <span class="text-base font-normal text-slate-500">/ мес</span>';
+                descAi.textContent = '30 дней. Разовая оплата.';
+            });
+
+            btnYear.addEventListener('click', () => {
+                btnYear.className = "px-5 py-2 bg-white rounded shadow-sm text-sm font-medium text-brand-600 transition-colors";
+                btnMonth.className = "px-5 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors";
+                
+                priceAi.innerHTML = '30 000 ₽ <span class="text-base font-normal text-slate-500">/ год</span>';
+                descAi.textContent = '365 дней. Оплата целиком за год. Экономия 5 880 ₽ к 12 месячным оплатам.';
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            parseURLParams();
+            initCalculator();
+            initSplitScreen();
+            initTariffs();
+            initHeroDemo();
+            initBillingToggle();
+        });
+    </script>
+</body>
+</html>
